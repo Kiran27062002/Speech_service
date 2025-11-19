@@ -1,3 +1,4 @@
-streamlit
-requests
-azure-cognitiveservices-speech
+streamlit==1.30.0
+azure-cognitiveservices-speech==1.25.0
+requests==2.32.0
+
