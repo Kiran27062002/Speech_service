@@ -9,7 +9,7 @@ st.title("🎤 Speech → Deepseek → Speech")
 # -------------------------
 # CONFIG: PUT YOUR KEYS HERE
 # -------------------------
-AZURE_SPEECH_KEY = "FS4yBV3YjzD9gw2g8Xzcz1k8OVpIXR8QaB0NuZt5ODQmappDVzirJQQJ99BKAC3pKaRXJ3w3AAAYACOGhPZt"
+AZURE_SPEECH_KEY = "A9GeyMvgVLr1V7Z0FEnkXG4Mvj5dNpndXBJUBFdQt5qt7ckmJisSJQQJ99BKAC3pKaRXJ3w3AAAYACOGZnFv"
 AZURE_SPEECH_REGION = "https://eastasia.api.cognitive.microsoft.com/"
 
 DEEPSEEK_API_KEY = "sk-bdd3d505652b4b5499e5c0fea9dde95b"
