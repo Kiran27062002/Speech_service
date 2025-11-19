@@ -13,7 +13,7 @@ AZURE_SPEECH_KEY = "FS4yBV3YjzD9gw2g8Xzcz1k8OVpIXR8QaB0NuZt5ODQmappDVzirJQQJ99BK
 AZURE_SPEECH_REGION = "eastasia"
 
 DEEPSEEK_API_KEY = "sk-bdd3d505652b4b5499e5c0fea9dde95b"
-DEEPSEEK_API_URL = "https://api.deepseek.com/v1"  # e.g., https://api.deepseek.ai/llm
+DEEPSEEK_API_URL = "https://api.deepseek.com/v1/llm/generate"  
 
 # -------------------------
 # Session State Defaults
