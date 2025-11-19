@@ -6,14 +6,14 @@ import base64
 # CONFIG / API KEYS
 # ------------------------------
 
-STT_API_KEY = "YOUR_SPEECH_TO_TEXT_KEY"
-STT_API_URL = "YOUR_STT_ENDPOINT"  # e.g. Azure, AssemblyAI, etc.
+STT_API_KEY = "FS4yBV3YjzD9gw2g8Xzcz1k8OVpIXR8QaB0NuZt5ODQmappDVzirJQQJ99BKAC3pKaRXJ3w3AAAYACOGhPZt"
+STT_API_URL = "https://eastasia.api.cognitive.microsoft.com/"  # e.g. Azure, AssemblyAI, etc.
 
-TTS_API_KEY = "YOUR_TTS_KEY"
-TTS_API_URL = "YOUR_TTS_ENDPOINT"  # e.g. Azure, Google, etc.
+TTS_API_KEY = "A9GeyMvgVLr1V7Z0FEnkXG4Mvj5dNpndXBJUBFdQt5qt7ckmJisSJQQJ99BKAC3pKaRXJ3w3AAAYACOGZnFv"
+TTS_API_URL = "https://eastasia.api.cognitive.microsoft.com/"  # e.g. Azure, Google, etc.
 
-LLM_API_KEY = "YOUR_LLM_KEY"
-LLM_URL = "YOUR_LLM_URL"  # e.g. https://api.groq.com/openai/v1/chat/completions
+LLM_API_KEY = "sk-f93fa055db47448b91caafec94fd84f9"
+LLM_URL = "https://api.deepseek.com"  # e.g. https://api.groq.com/openai/v1/chat/completions
 
 # ------------------------------
 # STREAMLIT APP UI
