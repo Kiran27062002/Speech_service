@@ -1,22 +1,29 @@
 import streamlit as st
 import requests
-import base64
 import tempfile
-
-st.set_page_config(page_title="Speech → Deepseek → Speech", layout="centered")
-st.title("🎤 Speech → Deepseek → Speech")
+from openai import OpenAI
 
 # -------------------------
 # CONFIG: PUT YOUR KEYS HERE
 # -------------------------
 AZURE_SPEECH_KEY = "FS4yBV3YjzD9gw2g8Xzcz1k8OVpIXR8QaB0NuZt5ODQmappDVzirJQQJ99BKAC3pKaRXJ3w3AAAYACOGhPZt"
-AZURE_SPEECH_REGION = "eastasia"
+AZURE_SPEECH_REGION = "eastasia"  # just the region
 
-DEEPSEEK_API_KEY = "sk-bdd3d505652b4b5499e5c0fea9dde95b"
-DEEPSEEK_API_URL = "https://api.deepseek.com/v1/llm/generate"  
+OPENROUTER_API_KEY = "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"
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+OPENROUTER_MODEL = "google/gemma-3n-e2b-it:free"
+
+# Initialize OpenRouter client
+client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=OPENROUTER_API_KEY)
 
 # -------------------------
-# Session State Defaults
+# Streamlit page config
+# -------------------------
+st.set_page_config(page_title="Speech → OpenRouter → Speech", layout="centered")
+st.title("🎤 Speech → OpenRouter → Speech")
+
+# -------------------------
+# Session state defaults
 # -------------------------
 if "audio_bytes" not in st.session_state:
     st.session_state["audio_bytes"] = None
@@ -64,19 +71,21 @@ def azure_speech_to_text(audio_path):
         return ""
 
 # -------------------------
-# 3️⃣ Send text to Deepseek LLM
+# 3️⃣ Send text to OpenRouter LLM
 # -------------------------
-def ask_deepseek(prompt_text):
-    headers = {
-        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    payload = {"prompt": prompt_text}
-    response = requests.post(DEEPSEEK_API_URL, headers=headers, json=payload)
-    if response.status_code == 200:
-        return response.json().get("response", "")
-    else:
-        st.error(f"Deepseek error: {response.text}")
+def ask_openrouter(prompt_text):
+    try:
+        completion = client.chat.completions.create(
+            model=OPENROUTER_MODEL,
+            messages=[{"role": "user", "content": prompt_text}],
+            extra_headers={
+                "HTTP-Referer": "https://your-site.com",
+                "X-Title": "Speech App"
+            },
+        )
+        return completion.choices[0].message.content
+    except Exception as e:
+        st.error(f"LLM error: {str(e)}")
         return ""
 
 # -------------------------
@@ -118,11 +127,11 @@ with col1:
             st.success("Transcription done!")
 
 with col2:
-    if st.button("Ask Deepseek LLM"):
+    if st.button("Ask OpenRouter LLM"):
         if st.session_state["transcript"].strip() == "":
             st.warning("Transcribe audio first!")
         else:
-            st.session_state["llm_answer"] = ask_deepseek(st.session_state["transcript"])
+            st.session_state["llm_answer"] = ask_openrouter(st.session_state["transcript"])
             st.success("LLM responded!")
 
 with col3:
