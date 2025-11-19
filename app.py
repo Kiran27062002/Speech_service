@@ -1,19 +1,19 @@
 import streamlit as st
-import requests
-import base64
 import tempfile
+import azure.cognitiveservices.speech as speechsdk
+import requests
 
 st.set_page_config(page_title="Speech → Deepseek → Speech", layout="centered")
-st.title("🎤 Speech → Deepseek → Speech")
+st.title("🎤 Speech → Deepseek → Speech (SDK Version)")
 
 # -------------------------
-# CONFIG: PUT YOUR KEYS HERE
+# CONFIG: Put your keys here
 # -------------------------
-AZURE_SPEECH_KEY = "A9GeyMvgVLr1V7Z0FEnkXG4Mvj5dNpndXBJUBFdQt5qt7ckmJisSJQQJ99BKAC3pKaRXJ3w3AAAYACOGZnFv"
-AZURE_SPEECH_REGION = "https://eastasia.api.cognitive.microsoft.com/"
+AZURE_SPEECH_KEY = "FS4yBV3YjzD9gw2g8Xzcz1k8OVpIXR8QaB0NuZt5ODQmappDVzirJQQJ99BKAC3pKaRXJ3w3AAAYACOGhPZt"
+AZURE_SPEECH_REGION = "eastasia"  # just the region, no URL
 
 DEEPSEEK_API_KEY = "sk-bdd3d505652b4b5499e5c0fea9dde95b"
-DEEPSEEK_API_URL = "https://api.deepseek.com"  # e.g., https://api.deepseek.ai/llm
+DEEPSEEK_API_URL = "https://api.deepseek.com"
 
 # -------------------------
 # Session State Defaults
@@ -46,25 +46,21 @@ def save_temp_audio(audio):
     return tmp_file.name
 
 # -------------------------
-# 2️⃣ Speech-to-Text (Azure REST)
+# 2️⃣ Speech-to-Text (Azure SDK)
 # -------------------------
 def azure_speech_to_text(audio_path):
-    url = f"https://{AZURE_SPEECH_REGION}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US"
-    headers = {
-        "Ocp-Apim-Subscription-Key": AZURE_SPEECH_KEY,
-        "Content-Type": "audio/wav"
-    }
-    with open(audio_path, "rb") as f:
-        data = f.read()
-    response = requests.post(url, headers=headers, data=data)
-    if response.status_code == 200:
-        return response.json().get("DisplayText", "")
+    speech_config = speechsdk.SpeechConfig(subscription=AZURE_SPEECH_KEY, region=AZURE_SPEECH_REGION)
+    audio_config = speechsdk.AudioConfig(filename=audio_path)
+    recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
+    result = recognizer.recognize_once()
+    if result.reason == speechsdk.ResultReason.RecognizedSpeech:
+        return result.text
     else:
-        st.error(f"STT error: {response.text}")
+        st.error(f"STT failed: {result.reason}")
         return ""
 
 # -------------------------
-# 3️⃣ Send text to Deepseek LLM
+# 3️⃣ Deepseek LLM call (keep requests)
 # -------------------------
 def ask_deepseek(prompt_text):
     headers = {
@@ -80,27 +76,20 @@ def ask_deepseek(prompt_text):
         return ""
 
 # -------------------------
-# 4️⃣ Text-to-Speech (Azure REST)
+# 4️⃣ Text-to-Speech (Azure SDK)
 # -------------------------
 def azure_text_to_speech(text):
-    url = f"https://{AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1"
-    headers = {
-        "Ocp-Apim-Subscription-Key": AZURE_SPEECH_KEY,
-        "Content-Type": "application/ssml+xml",
-        "X-Microsoft-OutputFormat": "riff-16khz-16bit-mono-pcm"
-    }
-    ssml = f"""
-    <speak version='1.0' xml:lang='en-US'>
-        <voice xml:lang='en-US' xml:gender='Female' name='en-US-JennyNeural'>
-            {text}
-        </voice>
-    </speak>
-    """
-    response = requests.post(url, headers=headers, data=ssml.encode("utf-8"))
-    if response.status_code == 200:
-        return response.content
+    speech_config = speechsdk.SpeechConfig(subscription=AZURE_SPEECH_KEY, region=AZURE_SPEECH_REGION)
+    # Pick voice
+    speech_config.speech_synthesis_voice_name = "en-US-JennyNeural"
+    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav").name
+    audio_config = speechsdk.audio.AudioOutputConfig(filename=tmp_file)
+    synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
+    result = synthesizer.speak_text_async(text).get()
+    if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+        return tmp_file
     else:
-        st.error(f"TTS error: {response.text}")
+        st.error(f"TTS failed: {result.reason}")
         return None
 
 # -------------------------
@@ -130,7 +119,8 @@ with col3:
         if st.session_state["llm_answer"].strip() == "":
             st.warning("Ask LLM first!")
         else:
-            st.session_state["tts_audio"] = azure_text_to_speech(st.session_state["llm_answer"])
+            tts_path = azure_text_to_speech(st.session_state["llm_answer"])
+            st.session_state["tts_audio"] = tts_path
             st.success("Audio synthesized!")
 
 # -------------------------
