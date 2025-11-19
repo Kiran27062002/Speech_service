@@ -1,122 +1,146 @@
 import streamlit as st
 import requests
 import base64
+import tempfile
 
-# ------------------------------
-# CONFIG / API KEYS
-# ------------------------------
+st.set_page_config(page_title="Speech → Deepseek → Speech", layout="centered")
+st.title("🎤 Speech → Deepseek → Speech")
 
-STT_API_KEY = "FS4yBV3YjzD9gw2g8Xzcz1k8OVpIXR8QaB0NuZt5ODQmappDVzirJQQJ99BKAC3pKaRXJ3w3AAAYACOGhPZt"
-STT_API_URL = "https://eastasia.api.cognitive.microsoft.com/"  # e.g. Azure, AssemblyAI, etc.
+# -------------------------
+# CONFIG: PUT YOUR KEYS HERE
+# -------------------------
+AZURE_SPEECH_KEY = "FS4yBV3YjzD9gw2g8Xzcz1k8OVpIXR8QaB0NuZt5ODQmappDVzirJQQJ99BKAC3pKaRXJ3w3AAAYACOGhPZt"
+AZURE_SPEECH_REGION = "https://eastasia.api.cognitive.microsoft.com/"
 
-TTS_API_KEY = "A9GeyMvgVLr1V7Z0FEnkXG4Mvj5dNpndXBJUBFdQt5qt7ckmJisSJQQJ99BKAC3pKaRXJ3w3AAAYACOGZnFv"
-TTS_API_URL = "https://eastasia.api.cognitive.microsoft.com/"  # e.g. Azure, Google, etc.
+DEEPSEEK_API_KEY = "sk-bdd3d505652b4b5499e5c0fea9dde95b"
+DEEPSEEK_API_URL = "https://api.deepseek.com"  # e.g., https://api.deepseek.ai/llm
 
-LLM_API_KEY = "sk-f93fa055db47448b91caafec94fd84f9"
-LLM_URL = "https://api.deepseek.com"  # e.g. https://api.groq.com/openai/v1/chat/completions
+# -------------------------
+# Session State Defaults
+# -------------------------
+if "audio_bytes" not in st.session_state:
+    st.session_state["audio_bytes"] = None
+if "transcript" not in st.session_state:
+    st.session_state["transcript"] = ""
+if "llm_answer" not in st.session_state:
+    st.session_state["llm_answer"] = ""
+if "tts_audio" not in st.session_state:
+    st.session_state["tts_audio"] = None
 
-# ------------------------------
-# STREAMLIT APP UI
-# ------------------------------
-
-st.title("🎤 Speech → LLM → Speech App")
-
-st.write("Speak in any language → Convert to Text → Ask LLM → Hear the Answer")
-
-# ----------------------------------------
-# 1️⃣ RECORD AUDIO (Streamlit built-in)
-# ----------------------------------------
-
-audio_bytes = st.audio_input("Click to Speak")
-
+# -------------------------
+# 1️⃣ Record audio in browser
+# -------------------------
+audio_bytes = st.audio_input("Click to speak")
 if audio_bytes:
+    st.session_state["audio_bytes"] = audio_bytes
     st.success("Audio recorded!")
-else:
-    st.info("Please record your voice.")
 
-# ----------------------------------------
-# 2️⃣ SPEECH TO TEXT
-# ----------------------------------------
+# -------------------------
+# Helper: Save audio temporarily
+# -------------------------
+def save_temp_audio(audio):
+    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+    tmp_file.write(audio.read())
+    tmp_file.flush()
+    tmp_file.close()
+    return tmp_file.name
 
-def speech_to_text(audio):
+# -------------------------
+# 2️⃣ Speech-to-Text (Azure REST)
+# -------------------------
+def azure_speech_to_text(audio_path):
+    url = f"https://{AZURE_SPEECH_REGION}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US"
     headers = {
-        "Authorization": STT_API_KEY,
+        "Ocp-Apim-Subscription-Key": AZURE_SPEECH_KEY,
         "Content-Type": "audio/wav"
     }
-    response = requests.post(STT_API_URL, headers=headers, data=audio)
-
+    with open(audio_path, "rb") as f:
+        data = f.read()
+    response = requests.post(url, headers=headers, data=data)
     if response.status_code == 200:
-        return response.json().get("text", "")
+        return response.json().get("DisplayText", "")
     else:
-        st.error(f"STT Error: {response.text}")
+        st.error(f"STT error: {response.text}")
         return ""
 
-if audio_bytes:
-    if st.button("Convert Speech to Text"):
-        stt_text = speech_to_text(audio_bytes)
-        st.text_area("Recognized Text", stt_text, height=150)
-    else:
-        stt_text = ""
-
-# ----------------------------------------
-# 3️⃣ SEND TEXT TO LLM
-# ----------------------------------------
-
-def ask_llm(prompt):
+# -------------------------
+# 3️⃣ Send text to Deepseek LLM
+# -------------------------
+def ask_deepseek(prompt_text):
     headers = {
-        "Authorization": f"Bearer {LLM_API_KEY}",
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
         "Content-Type": "application/json"
     }
-
-    payload = {
-        "model": "llama3-70b",   # Change based on provider
-        "messages": [
-            {"role": "user", "content": prompt}
-        ]
-    }
-
-    response = requests.post(LLM_URL, json=payload, headers=headers)
-
+    payload = {"prompt": prompt_text}
+    response = requests.post(DEEPSEEK_API_URL, headers=headers, json=payload)
     if response.status_code == 200:
-        return response.json()["choices"][0]["message"]["content"]
+        return response.json().get("response", "")
     else:
-        st.error(f"LLM Error: {response.text}")
+        st.error(f"Deepseek error: {response.text}")
         return ""
 
-if audio_bytes and stt_text:
-    if st.button("Ask LLM"):
-        llm_answer = ask_llm(stt_text)
-        st.text_area("LLM Answer", llm_answer, height=150)
-    else:
-        llm_answer = ""
-
-# ----------------------------------------
-# 4️⃣ TEXT TO SPEECH
-# ----------------------------------------
-
-def text_to_speech(text):
+# -------------------------
+# 4️⃣ Text-to-Speech (Azure REST)
+# -------------------------
+def azure_text_to_speech(text):
+    url = f"https://{AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1"
     headers = {
-        "Authorization": TTS_API_KEY,
-        "Content-Type": "application/json"
+        "Ocp-Apim-Subscription-Key": AZURE_SPEECH_KEY,
+        "Content-Type": "application/ssml+xml",
+        "X-Microsoft-OutputFormat": "riff-16khz-16bit-mono-pcm"
     }
-
-    payload = {
-        "text": text,
-        "voice": "default",
-        "language": "auto"
-    }
-
-    response = requests.post(TTS_API_URL, headers=headers, json=payload)
-
+    ssml = f"""
+    <speak version='1.0' xml:lang='en-US'>
+        <voice xml:lang='en-US' xml:gender='Female' name='en-US-JennyNeural'>
+            {text}
+        </voice>
+    </speak>
+    """
+    response = requests.post(url, headers=headers, data=ssml.encode("utf-8"))
     if response.status_code == 200:
-        audio_data = base64.b64decode(response.json()["audio"])
-        return audio_data
+        return response.content
     else:
-        st.error(f"TTS Error: {response.text}")
+        st.error(f"TTS error: {response.text}")
         return None
 
-if llm_answer:
-    if st.button("Speak Answer"):
-        audio_output = text_to_speech(llm_answer)
-        if audio_output:
-            st.audio(audio_output, format="audio/wav")
+# -------------------------
+# BUTTONS
+# -------------------------
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    if st.button("Convert Speech → Text"):
+        if st.session_state["audio_bytes"] is None:
+            st.warning("Record audio first!")
+        else:
+            tmp_path = save_temp_audio(st.session_state["audio_bytes"])
+            st.session_state["transcript"] = azure_speech_to_text(tmp_path)
+            st.success("Transcription done!")
+
+with col2:
+    if st.button("Ask Deepseek LLM"):
+        if st.session_state["transcript"].strip() == "":
+            st.warning("Transcribe audio first!")
+        else:
+            st.session_state["llm_answer"] = ask_deepseek(st.session_state["transcript"])
+            st.success("LLM responded!")
+
+with col3:
+    if st.button("Speak LLM Answer"):
+        if st.session_state["llm_answer"].strip() == "":
+            st.warning("Ask LLM first!")
+        else:
+            st.session_state["tts_audio"] = azure_text_to_speech(st.session_state["llm_answer"])
+            st.success("Audio synthesized!")
+
+# -------------------------
+# DISPLAY
+# -------------------------
+st.subheader("Transcribed Text")
+st.text_area("Transcript", st.session_state["transcript"], height=150)
+
+st.subheader("LLM Answer")
+st.text_area("LLM Answer", st.session_state["llm_answer"], height=150)
+
+if st.session_state["tts_audio"]:
+    st.audio(st.session_state["tts_audio"], format="audio/wav")
