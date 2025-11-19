@@ -3,12 +3,12 @@ import requests
 import tempfile
 
 # -------------------------
-# CONFIG: PUT YOUR KEYS HERE
+# CONFIG: Put your keys here
 # -------------------------
 AZURE_SPEECH_KEY = "FS4yBV3YjzD9gw2g8Xzcz1k8OVpIXR8QaB0NuZt5ODQmappDVzirJQQJ99BKAC3pKaRXJ3w3AAAYACOGhPZt"
 AZURE_SPEECH_REGION = "eastasia"  # just the region
 
-OPENROUTER_API_KEY = "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"
+OPENROUTER_API_KEY = "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"
 OPENROUTER_MODEL = "google/gemma-3n-e2b-it:free"
 
 # -------------------------
@@ -58,15 +58,19 @@ def azure_speech_to_text(audio_path):
     }
     with open(audio_path, "rb") as f:
         data = f.read()
-    response = requests.post(url, headers=headers, data=data)
-    if response.status_code == 200:
-        return response.json().get("DisplayText", "")
-    else:
-        st.error(f"STT error: {response.text}")
+    try:
+        response = requests.post(url, headers=headers, data=data, timeout=15)
+        if response.status_code == 200:
+            return response.json().get("DisplayText", "")
+        else:
+            st.error(f"STT error: {response.status_code} {response.text}")
+            return ""
+    except requests.exceptions.RequestException as e:
+        st.error(f"STT request failed: {str(e)}")
         return ""
 
 # -------------------------
-# 3️⃣ Send text to OpenRouter LLM via requests
+# 3️⃣ Send text to OpenRouter LLM
 # -------------------------
 def ask_openrouter(prompt_text):
     url = "https://openrouter.ai/api/v1/chat/completions"
@@ -78,11 +82,18 @@ def ask_openrouter(prompt_text):
         "model": OPENROUTER_MODEL,
         "messages": [{"role": "user", "content": prompt_text}]
     }
-    response = requests.post(url, headers=headers, json=payload)
-    if response.status_code == 200:
-        return response.json()["choices"][0]["message"]["content"]
-    else:
-        st.error(f"LLM error: {response.status_code} {response.text}")
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=20)
+        if response.status_code == 200:
+            return response.json()["choices"][0]["message"]["content"]
+        elif response.status_code == 401:
+            st.error("LLM Authorization error: Invalid API key. Please check your key.")
+            return ""
+        else:
+            st.error(f"LLM error: {response.status_code} {response.text}")
+            return ""
+    except requests.exceptions.RequestException as e:
+        st.error(f"LLM request failed: {str(e)}")
         return ""
 
 # -------------------------
@@ -102,42 +113,35 @@ def azure_text_to_speech(text):
         </voice>
     </speak>
     """
-    response = requests.post(url, headers=headers, data=ssml.encode("utf-8"))
-    if response.status_code == 200:
-        return response.content
-    else:
-        st.error(f"TTS error: {response.text}")
+    try:
+        response = requests.post(url, headers=headers, data=ssml.encode("utf-8"), timeout=15)
+        if response.status_code == 200:
+            return response.content
+        else:
+            st.error(f"TTS error: {response.status_code} {response.text}")
+            return None
+    except requests.exceptions.RequestException as e:
+        st.error(f"TTS request failed: {str(e)}")
         return None
 
 # -------------------------
-# BUTTONS
+# SINGLE BUTTON: Record → LLM → Speak
 # -------------------------
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    if st.button("Convert Speech → Text"):
-        if st.session_state["audio_bytes"] is None:
-            st.warning("Record audio first!")
-        else:
-            tmp_path = save_temp_audio(st.session_state["audio_bytes"])
-            st.session_state["transcript"] = azure_speech_to_text(tmp_path)
-            st.success("Transcription done!")
-
-with col2:
-    if st.button("Ask OpenRouter LLM"):
+if st.button("Record → Ask → Speak"):
+    if st.session_state["audio_bytes"] is None:
+        st.warning("Record audio first!")
+    else:
+        tmp_path = save_temp_audio(st.session_state["audio_bytes"])
+        # 1️⃣ STT
+        st.session_state["transcript"] = azure_speech_to_text(tmp_path)
         if st.session_state["transcript"].strip() == "":
-            st.warning("Transcribe audio first!")
+            st.error("No transcription available.")
         else:
+            # 2️⃣ LLM
             st.session_state["llm_answer"] = ask_openrouter(st.session_state["transcript"])
-            st.success("LLM responded!")
-
-with col3:
-    if st.button("Speak LLM Answer"):
-        if st.session_state["llm_answer"].strip() == "":
-            st.warning("Ask LLM first!")
-        else:
-            st.session_state["tts_audio"] = azure_text_to_speech(st.session_state["llm_answer"])
-            st.success("Audio synthesized!")
+            # 3️⃣ TTS
+            if st.session_state["llm_answer"].strip() != "":
+                st.session_state["tts_audio"] = azure_text_to_speech(st.session_state["llm_answer"])
 
 # -------------------------
 # DISPLAY
