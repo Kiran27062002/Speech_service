@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 import tempfile
-from openai import OpenAI
 
 # -------------------------
 # CONFIG: PUT YOUR KEYS HERE
@@ -10,11 +9,7 @@ AZURE_SPEECH_KEY = "FS4yBV3YjzD9gw2g8Xzcz1k8OVpIXR8QaB0NuZt5ODQmappDVzirJQQJ99BK
 AZURE_SPEECH_REGION = "eastasia"  # just the region
 
 OPENROUTER_API_KEY = "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"
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 OPENROUTER_MODEL = "google/gemma-3n-e2b-it:free"
-
-# Initialize OpenRouter client
-client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=OPENROUTER_API_KEY)
 
 # -------------------------
 # Streamlit page config
@@ -71,21 +66,23 @@ def azure_speech_to_text(audio_path):
         return ""
 
 # -------------------------
-# 3️⃣ Send text to OpenRouter LLM
+# 3️⃣ Send text to OpenRouter LLM via requests
 # -------------------------
 def ask_openrouter(prompt_text):
-    try:
-        completion = client.chat.completions.create(
-            model=OPENROUTER_MODEL,
-            messages=[{"role": "user", "content": prompt_text}],
-            extra_headers={
-                "HTTP-Referer": "https://your-site.com",
-                "X-Title": "Speech App"
-            },
-        )
-        return completion.choices[0].message.content
-    except Exception as e:
-        st.error(f"LLM error: {str(e)}")
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": OPENROUTER_MODEL,
+        "messages": [{"role": "user", "content": prompt_text}]
+    }
+    response = requests.post(url, headers=headers, json=payload)
+    if response.status_code == 200:
+        return response.json()["choices"][0]["message"]["content"]
+    else:
+        st.error(f"LLM error: {response.status_code} {response.text}")
         return ""
 
 # -------------------------
