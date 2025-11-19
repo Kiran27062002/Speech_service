@@ -8,7 +8,7 @@ import tempfile
 AZURE_SPEECH_KEY = "FS4yBV3YjzD9gw2g8Xzcz1k8OVpIXR8QaB0NuZt5ODQmappDVzirJQQJ99BKAC3pKaRXJ3w3AAAYACOGhPZt"
 AZURE_SPEECH_REGION = "eastasia"  # just the region
 
-OPENROUTER_API_KEY = "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"
+OPENROUTER_API_KEY = "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"
 OPENROUTER_MODEL = "google/gemma-3n-e2b-it:free"
 
 # -------------------------
