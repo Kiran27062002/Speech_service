@@ -73,7 +73,7 @@ def azure_speech_to_text(audio_path):
 # 3️⃣ Send text to OpenRouter LLM
 # -------------------------
 def ask_openrouter(prompt_text):
-    url = "https://openrouter.ai/api/v1"
+    url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json"
@@ -82,19 +82,32 @@ def ask_openrouter(prompt_text):
         "model": OPENROUTER_MODEL,
         "messages": [{"role": "user", "content": prompt_text}]
     }
+
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=20)
+
+        # Debug print (optional)
+        # st.write("RAW:", response.text)
+
         if response.status_code == 200:
             return response.json()["choices"][0]["message"]["content"]
+
         elif response.status_code == 401:
-            st.error("LLM Authorization error: Invalid API key. Please check your key.")
+            st.error("❌ Invalid API key (401 Unauthorized)")
             return ""
+
+        elif response.status_code == 404:
+            st.error("❌ Model not found (404 Not Found)")
+            return ""
+
         else:
-            st.error(f"LLM error: {response.status_code} {response.text}")
+            st.error(f"LLM error {response.status_code}: {response.text}")
             return ""
+
     except requests.exceptions.RequestException as e:
         st.error(f"LLM request failed: {str(e)}")
         return ""
+
 
 # -------------------------
 # 4️⃣ Text-to-Speech (Azure REST)
