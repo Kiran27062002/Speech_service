@@ -79,7 +79,7 @@ def ask_openrouter(prompt_text):
         "Content-Type": "application/json"
     }
     payload = {
-        "model": OPENROUTER_MODEL,
+        "model": "tngtech/deepseek-r1t2-chimera:free",
         "messages": [{"role": "user", "content": prompt_text}]
     }
 
