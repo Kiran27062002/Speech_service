@@ -8,8 +8,8 @@ import tempfile
 AZURE_SPEECH_KEY = "FS4yBV3YjzD9gw2g8Xzcz1k8OVpIXR8QaB0NuZt5ODQmappDVzirJQQJ99BKAC3pKaRXJ3w3AAAYACOGhPZt"
 AZURE_SPEECH_REGION = "eastasia"  # just the region
 
-OPENROUTER_API_KEY = "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"
-OPENROUTER_MODEL = "google/gemma-3n-e2b-it:free"
+OPENROUTER_API_KEY = "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"
+OPENROUTER_MODEL = "https://openrouter.ai/api/v1/chat/completions"
 
 # -------------------------
 # Streamlit page config
