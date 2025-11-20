@@ -9,7 +9,7 @@ AZURE_SPEECH_KEY = "FS4yBV3YjzD9gw2g8Xzcz1k8OVpIXR8QaB0NuZt5ODQmappDVzirJQQJ99BK
 AZURE_SPEECH_REGION = "eastasia"  # just the region
 
 OPENROUTER_API_KEY = "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"
-OPENROUTER_MODEL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_MODEL = "openai/gpt-oss-20b:free"
 
 # -------------------------
 # Streamlit page config
