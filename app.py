@@ -73,7 +73,7 @@ def azure_speech_to_text(audio_path):
 # 3️⃣ Send text to OpenRouter LLM
 # -------------------------
 def ask_openrouter(prompt_text):
-    url = "https://openrouter.ai/api/v1/"
+    url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json"
