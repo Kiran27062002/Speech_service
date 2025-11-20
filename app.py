@@ -8,8 +8,8 @@ import tempfile
 AZURE_SPEECH_KEY = "FS4yBV3YjzD9gw2g8Xzcz1k8OVpIXR8QaB0NuZt5ODQmappDVzirJQQJ99BKAC3pKaRXJ3w3AAAYACOGhPZt"
 AZURE_SPEECH_REGION = "eastasia"  # just the region
 
-OPENROUTER_API_KEY = "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"
-OPENROUTER_MODEL = "openai/gpt-oss-20b:free"
+OPENROUTER_API_KEY = "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"
+OPENROUTER_MODEL = "tngtech/deepseek-r1t2-chimera:free"
 
 # -------------------------
 # Streamlit page config
